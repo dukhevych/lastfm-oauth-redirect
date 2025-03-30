@@ -10,6 +10,7 @@
       const token = params.get('token');
 
       if (window.opener) {
+        console.log(window.opener);
         window.opener.postMessage(
           { type: 'lastfm_token', token },
           '*',
