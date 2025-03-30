@@ -6,17 +6,19 @@
   </head>
   <body>
     <script>
-      const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
-      const source = params.get('source');
 
-      if (token) {
-        browserAPI.runtime.sendMessage({ type: 'lastfm_token', token, source });
+      if (window.opener) {
+        window.opener.postMessage(
+          { type: 'lastfm_token', token },
+          '*',
+        );
       }
 
       setTimeout(() => window.close(), 500);
     </script>
+    
     <p>Authorizing…</p>
   </body>
 </html>
