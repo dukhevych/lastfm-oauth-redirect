@@ -6,12 +6,13 @@
   </head>
   <body>
     <script>
+      const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
       const source = params.get('source');
 
       if (token) {
-        chrome.runtime.sendMessage({ type: 'lastfm_token', token, source });
+        browserAPI.runtime.sendMessage({ type: 'lastfm_token', token, source });
       }
 
       setTimeout(() => window.close(), 500);
