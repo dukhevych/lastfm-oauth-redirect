@@ -15,12 +15,12 @@
       function sendToExtension(authData) {
         // Try to connect to the extension
         try {
-          chrome.runtime.sendMessage({
+          browserAPI.runtime.sendMessage({
             type: "lastfm_token",
             token: authData.token,
           }, response => {
-            if (chrome.runtime.lastError) {
-              console.error("Error sending to extension:", chrome.runtime.lastError);
+            if (browserAPI.runtime.lastError) {
+              console.error("Error sending to extension:", browserAPI.runtime.lastError);
               displayConnectionError();
             } else {
               displaySuccess();
