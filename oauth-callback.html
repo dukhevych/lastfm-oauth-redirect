@@ -14,7 +14,6 @@
         chrome.runtime.sendMessage({ type: 'lastfm_token', token, source });
       }
 
-      // Slight delay before closing (just in case)
       setTimeout(() => window.close(), 500);
     </script>
     <p>Authorizing…</p>
