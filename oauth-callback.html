@@ -1,71 +1,143 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Redirecting...</title>
-    <script>
-      const browserAPI = typeof window.browser !== 'undefined' ? window.browser : window.chrome;
-
-      function getAuthData() {
-        const queryParams = new URLSearchParams(window.location.search);
-
-        return { token: queryParams.get('token') };
-      }
-
-      function sendToExtension(authData) {
-        // Try to connect to the extension
-        try {
-          browserAPI.runtime.sendMessage({
-            type: "lastfm_token",
-            token: authData.token,
-          }, response => {
-            if (browserAPI.runtime.lastError) {
-              console.error("Error sending to extension:", browserAPI.runtime.lastError);
-              displayConnectionError();
-            } else {
-              displaySuccess();
-            }
-          });
-        } catch (e) {
-          console.error("Failed to connect to extension:", e);
-          displayConnectionError();
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Last.fm Authentication</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    h1 {
+      color: #d51007; /* Last.fm red */
+    }
+    
+    #auth-status {
+      margin: 20px 0;
+      padding: 15px;
+      border-radius: 4px;
+    }
+    
+    .success {
+      background-color: #dff0d8;
+      color: #3c763d;
+      border: 1px solid #d6e9c6;
+    }
+    
+    .error {
+      background-color: #f2dede;
+      color: #a94442;
+      border: 1px solid #ebccd1;
+    }
+    
+    .info {
+      background-color: #d9edf7;
+      color: #31708f;
+      border: 1px solid #bce8f1;
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top-color: #d51007;
+      animation: spin 1s ease-in-out infinite;
+      margin: 20px auto;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h1>Last.fm Authentication</h1>
+  
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Processing authentication...</p>
+  </div>
+  
+  <div id="auth-status" class="info">
+    Connecting to extension...
+  </div>
+  
+  <p id="auto-close-message" style="display: none;">
+    This window will close automatically in <span id="countdown">5</span> seconds.
+  </p>
+  
+  <script>
+    // Browser API compatibility polyfill
+    const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+    
+    // This is a fallback script that will only run if the content script fails
+    
+    // Function to display error if extension isn't detected
+    function checkExtensionConnection() {
+      setTimeout(() => {
+        const status = document.getElementById('auth-status');
+        if (status.textContent === 'Connecting to extension...') {
+          status.className = 'error';
+          status.textContent = 'Unable to connect to the browser extension. Please make sure it is installed and try again.';
+          
+          document.getElementById('loading').style.display = 'none';
         }
-      }
-
-      // Display messages to the user
-      function displayConnectionError() {
-        document.body.innerHTML = `
-          <h1>Connection to extension failed</h1>
-          <p>Please make sure the extension is installed and try again.</p>
-          <p>You can close this window and retry the login.</p>
-        `;
-      }
-
-      function displaySuccess() {
-        document.body.innerHTML = `
-          <h1>Authentication successful!</h1>
-          <p>You can close this window and return to the extension.</p>
-        `;
+      }, 3000); // Wait 3 seconds before showing the error
+    }
+    
+    // Auto-close countdown when authentication is successful
+    function startAutoClose() {
+      document.getElementById('auto-close-message').style.display = 'block';
+      let count = 5;
+      const countdownEl = document.getElementById('countdown');
+      
+      const interval = setInterval(() => {
+        count--;
+        countdownEl.textContent = count;
         
-        // Auto-close after a delay
-        setTimeout(() => window.close(), 3000);
-      }
-
-      // Execute when page loads
-      document.addEventListener('DOMContentLoaded', () => {
-        const authData = getAuthData();
-        if (authData.token) {
-          sendToExtension(authData);
-        } else {
-          document.body.innerHTML = `
-            <h1>Authentication Error</h1>
-            <p>No authentication token was received.</p>
-          `;
+        if (count <= 0) {
+          clearInterval(interval);
+          window.close();
         }
-      });
-    </script>
-  </head>
-  <body>
-    <p>Authorizing…</p>
-  </body>
+      }, 1000);
+    }
+    
+    // Check if we have a token in the URL
+    function checkForToken() {
+      const queryParams = new URLSearchParams(window.location.search);
+      const token = queryParams.get('token');
+      
+      if (token) {
+        // We have a token, but if you're seeing this,
+        // the content script may not have loaded properly
+        document.getElementById('auth-status').textContent = 
+          "Found authentication token, waiting for extension...";
+      }
+    }
+    
+    // Start the checks when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      checkExtensionConnection();
+      checkForToken();
+    });
+    
+    // Add event listener to receive messages from content script
+    window.addEventListener('message', function(event) {
+      // Only accept messages from our own window
+      if (event.source !== window) return;
+      
+      if (event.data.type === 'auth_success') {
+        document.getElementById('loading').style.display = 'none';
+        startAutoClose();
+      }
+    });
+  </script>
+</body>
 </html>
