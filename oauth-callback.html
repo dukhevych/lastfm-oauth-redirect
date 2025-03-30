@@ -3,25 +3,69 @@
   <head>
     <meta charset="UTF-8" />
     <title>Redirecting...</title>
-  </head>
-  <body>
     <script>
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get('token');
+      const browserAPI = typeof window.browser !== 'undefined' ? window.browser : window.chrome;
 
-      console.log(window.opener);
+      function getAuthData() {
+        const queryParams = new URLSearchParams(window.location.search);
 
-      if (window.opener) {
-        console.log(window.opener);
-        window.opener.postMessage(
-          { type: 'lastfm_token', token },
-          '*',
-        );
+        return { token: queryParams.get('token') };
       }
 
-      // setTimeout(() => window.close(), 500);
+      function sendToExtension(authData) {
+        // Try to connect to the extension
+        try {
+          chrome.runtime.sendMessage({
+            type: "lastfm_token",
+            token: authData.token,
+          }, response => {
+            if (chrome.runtime.lastError) {
+              console.error("Error sending to extension:", chrome.runtime.lastError);
+              displayConnectionError();
+            } else {
+              displaySuccess();
+            }
+          });
+        } catch (e) {
+          console.error("Failed to connect to extension:", e);
+          displayConnectionError();
+        }
+      }
+
+      // Display messages to the user
+      function displayConnectionError() {
+        document.body.innerHTML = `
+          <h1>Connection to extension failed</h1>
+          <p>Please make sure the extension is installed and try again.</p>
+          <p>You can close this window and retry the login.</p>
+        `;
+      }
+
+      function displaySuccess() {
+        document.body.innerHTML = `
+          <h1>Authentication successful!</h1>
+          <p>You can close this window and return to the extension.</p>
+        `;
+        
+        // Auto-close after a delay
+        setTimeout(() => window.close(), 3000);
+      }
+
+      // Execute when page loads
+      document.addEventListener('DOMContentLoaded', () => {
+        const authData = getAuthData();
+        if (authData.token) {
+          sendToExtension(authData);
+        } else {
+          document.body.innerHTML = `
+            <h1>Authentication Error</h1>
+            <p>No authentication token was received.</p>
+          `;
+        }
+      });
     </script>
-    
+  </head>
+  <body>
     <p>Authorizing…</p>
   </body>
 </html>
